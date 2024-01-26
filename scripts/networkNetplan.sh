@@ -12,8 +12,8 @@ network:
         - $1/$2
       nameservers:
         addresses:
-          - 8.8.8.8
-          - 8.8.4.4
+          - 1.1.1.1
+          - 1.0.0.1
         search:
           - $3
       dhcp4: false

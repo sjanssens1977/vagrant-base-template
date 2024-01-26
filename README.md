@@ -1,10 +1,11 @@
 # Vagrant template for Hyper-V
 
-This is my `Vagrantfile` that I use to __quickly create__ one or more __*Ubuntu* VMs on Windows using Hyper-V__.
+This is my `Vagrantfile` that I use to __quickly create__ one or more __*Ubuntu* or *Debian* VMs on Windows using Hyper-V__.
 
 > NOTE: The template features are known to work with the following Vagrant boxes:
 > * `generic/ubuntu2004`
 > * `generic/ubuntu2204`
+> * `sjanssens1977/debian12`
 >
 > WARN: You could try to use other boxes, but some features may not work as expected.
 
@@ -59,15 +60,16 @@ machines = {
 
 Each machine that needs to be provisioned, must be defined by a machine name (hash key) and a nested hash that contains key/value pairs.
 
-The _nested hash_ supported keys are: `aliasses:`, `box:`, `cpus:`, `ip:`, `memory:`, `opts:`, `type:`.
+The _nested hash_ supported keys are: `aliasses:`, `box:`, `cpus:`, `ip:`, `ip_config_manager`, `memory:`, `opts:`, `type:`.
 
 * `aliasses`: DNS aliasses. __Optional__
 * `box`: the Vagrant box to use for the VM. NOTE: some features may not work if you use a box that is not tested.
 * `cpus`:  number of virtual cpus assigned to the VM. __Optional__: _default value_ is `1`.
 * `ip`: used to assign a static ip address. __Optional__
+* `ip_config_manager`: The network configuration manager used by the OS. The allowed values are `iface` and `netplan`. __Optional__: default value is `netplan`
 * `memory`: maximum memory available for the VM, expressed in MB. __Optional__: _default value_ is `2048`.
 * `opts:`: Define optional arguments, currently only used to specify additional `INSTALL_K3S_EXEC` options. __Optional__
-* `type`: Allowed values are `server` and `agent`. __Optional__: default value is `generic/ubuntu2204`
+* `type`: Allowed values are `k3s_server` and `k3s_agent`. __Optional__
 
 > WARN: The structure of the `machines` _nested hash_ is important and should not be changed.
 
@@ -87,6 +89,10 @@ The Hyper-V "Default Switch" will be used for this machine.
 > Please make sure you have prepared the [first-time setup step](#step-2-create-the-hyper-v-virtual-switch-nat-switch) to create the Hyper-V virtual switch named `NAT Switch`. 
 
 To assign a static ip address to a VM, simply add the _nested hash_ key `ip:` with the ip address as the value.
+It is advised to specify the network configuration manager used by the OS using the _nested hash_ key ip_config_manager with one of the allowed values: `iface` or `netplan`.
+
+For standaard Debian (not the cloud-init images) use the `iface` network configuration manager.  
+Ubuntu use `netplan` to manage network configurations.
 
 The `NAT Switch` ip address range is `192.168.77.0/24`.  
 This means the static ip address must be in the range 192.168.77.2 - 192.168.77.254.
@@ -142,7 +148,16 @@ machines = {
 }
 ```
 
-### 2. Create a k3s single node cluster
+### 2. Create a Debian VM with a static ip address
+
+```ruby
+machines = {
+  "vm-debian12": {box: "sjanssens1977/debian12", ip: "192.168.77.77", ip_config_manager: "iface"}
+}
+```
+
+
+### 3. Create a k3s single node cluster
 
 This configuration will create a single node k3s cluster that runs on a Ubuntu 22.04 VM.  
 The VM is assigned a dynamic ip address and is addressable by the names `vm-website.example.com`, `blog.example.com` and `www.example.com`.
@@ -153,7 +168,7 @@ machines = {
 }
 ```
 
-### 3. Create a k3s 2 node cluster (server and agent)
+### 4. Create a k3s 2 node cluster (server and agent)
 
 This configuration will create 2 Ubuntu VMs, one using release 20.04 and the other 22.04.  
 The first VM is assigned the static ip address 192.168.77.10 and is addressable by the names `vm-k3s-server.example.com`, `blog.example.com` and `www.example.com`. It hosts a k3s server process.  
@@ -161,7 +176,7 @@ The second VM is assigned the static ip address 192.168.77.11 and is addressable
 
 ```ruby
 machines = {
-  "vm-k3s-node1": {ip: "192.168.77.10", cpus: 2, memory: 4096, type: "k3s_server", aliases: "blog.#{domain},www.#{domain}", opts: "--disable traefik"},
+  "vm-k3s-node1": {ip: "192.168.77.10", ip_config_manager: "netplan", cpus: 2, memory: 4096, type: "k3s_server", aliases: "blog.#{domain},www.#{domain}", opts: "--disable traefik"},
   "vm-k3s-node2": {ip: "192.168.77.20", type: "k3s_agent", box: "generic/ubuntu2004"}
 }
 ```

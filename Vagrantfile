@@ -96,7 +96,19 @@ Vagrant.configure("2") do |config|
 
       # Use shell script _hack_ to setup a static ip address for the VM
       if params.key?(:ip)
-        machine.vm.provision "shell", path: "./scripts/network.sh", args: [params[:ip], cidr, domain, gateway]
+        if params.key?(:ip_config_manager)
+          if "netplan".eql?(params[:ip_config_manager])
+            machine.vm.provision "shell", path: "./scripts/networkNetplan.sh", args: [params[:ip], cidr, domain, gateway]
+          elsif "iface".eql?(params[:ip_config_manager])
+            machine.vm.provision "shell", path: "./scripts/networkInterfaces.sh", args: [params[:ip], cidr, domain, gateway]
+          else
+            puts "WARN: Unsupported ip_config_manager detected '#{params[:ip_config_manager]}' for machine #{name}."
+            puts "WARN: Ignoring static ip configuration."
+          end
+        else
+          puts "WARN: ip_config_manager not specified. Trying 'netplan'."
+          machine.vm.provision "shell", path: "./scripts/networkNetplan.sh", args: [params[:ip], cidr, domain, gateway]
+        end
       end
 
       if params.key?(:type)
